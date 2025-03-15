@@ -17,8 +17,15 @@
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "discord",
+    "screenshot"
   ],
+  "homepage": "https://github.com/share121/msg-photo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/share121/msg-photo.git"
+  },
   "peerDependencies": {
     "koishi": "^4.18.7"
   },

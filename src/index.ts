@@ -8,11 +8,23 @@ export const name = "msg-photo";
 export interface Config {
   token: string;
   headless: boolean;
+  scale: number;
 }
 
 export const Config: Schema<Config> = Schema.object({
-  token: Schema.string().required(),
-  headless: Schema.boolean().default(true),
+  token: Schema.string()
+    .role("secret")
+    .required()
+    .description("你的 Discord Token"),
+  headless: Schema.boolean()
+    .default(true)
+    .description("是否以无头模式运行（为 `true` 时不会显示浏览器窗口）"),
+  scale: Schema.number()
+    .min(1)
+    .default(5)
+    .description(
+      "截图的缩放比例，越大越清晰，不过太大的图片 Discord 可能会拒绝发送"
+    ),
 });
 
 const screenshot =
@@ -54,7 +66,7 @@ export async function apply(ctx: Context, config: Config) {
       await page.setViewport({
         width: 192000,
         height: 108000,
-        deviceScaleFactor: 5,
+        deviceScaleFactor: config.scale,
       });
       await page.goto(`https://discord.com/channels/${guildId}/${channelId}`, {
         waitUntil: "networkidle0",
@@ -74,7 +86,7 @@ export async function apply(ctx: Context, config: Config) {
   ctx
     .command("msg-photo <ids> 给消息拍照")
     .usage(
-      "注意：ids 为消息 id，多个 id 用英文逗号(,)隔开，支持 [公会id]/[频道id]/<消息id> 格式"
+      "注意：ids 为消息 id，多个 id 用英文逗号(,)隔开，支持 公会id/频道id/消息id 格式"
     )
     .example(
       "msg-photo 123,777/456,111/222/789  给消息 id 为 123、456、789 的消息拍照"
@@ -105,11 +117,15 @@ export async function apply(ctx: Context, config: Config) {
               `#chat-messages-${channelId}-${msgId} > div`
             );
             await chat.scrollIntoView();
-            const dataurl = await page.evaluate((chat) => {
-              chat.style.width = "max-content";
-              // @ts-ignore
-              return modernScreenshot.domToPng(chat, { scale: 5 });
-            }, chat);
+            const dataurl = await page.evaluate(
+              (chat, scale) => {
+                chat.style.width = "max-content";
+                // @ts-ignore
+                return modernScreenshot.domToPng(chat, { scale });
+              },
+              chat,
+              config.scale
+            );
             await chat.dispose();
             url.push(dataurl);
             return h("img", { src: await createVerticalCollage(url) });
